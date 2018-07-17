@@ -2,26 +2,33 @@ package org.project.cd.pccontroller;
 
 import android.os.AsyncTask;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 public class ConnectionThread extends AsyncTask<String, Void, Integer> {
     private Socket socket;
-    private BufferedReader reader;
-    private BufferedWriter writer;
+    private DataOutputStream writer;
+    private DataInputStream reader;
     private StreamsHelper streamsHelper = null;
 
     @Override
     protected Integer doInBackground(String... strings) {
+        System.out.println("start");
         try {
-            System.out.println("start");
+            /*InetSocketAddress address = new InetSocketAddress(strings[0], Integer.parseInt(strings[1]));
+            while (!address.isUnresolved()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }*/
             socket = new Socket(strings[0], Integer.parseInt(strings[1]));
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            writer = new DataOutputStream(socket.getOutputStream());
+            reader = new DataInputStream(socket.getInputStream());
             streamsHelper = new StreamsHelper();
         } catch (IOException e) {
             e.printStackTrace();
@@ -35,8 +42,7 @@ public class ConnectionThread extends AsyncTask<String, Void, Integer> {
 
     private void send(String message) {
         try {
-            message +='\n';
-            writer.write(message, 0, message.length());
+            writer.writeUTF(message);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -44,7 +50,10 @@ public class ConnectionThread extends AsyncTask<String, Void, Integer> {
 
     private String read() {
         try {
-            return reader.readLine();
+            int length = reader.readInt();
+            byte[] buff = new byte[length];
+            reader.readFully(buff, 0, length);
+            return new String(buff);
         } catch (IOException e) {
             e.printStackTrace();
             //todo
