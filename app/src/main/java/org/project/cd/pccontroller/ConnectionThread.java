@@ -1,6 +1,8 @@
 package org.project.cd.pccontroller;
 
+import android.annotation.SuppressLint;
 import android.os.AsyncTask;
+import android.os.Looper;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -11,65 +13,69 @@ public class ConnectionThread extends AsyncTask<String, Void, Integer> {
     private Socket socket;
     private DataOutputStream writer;
     private DataInputStream reader;
-    private StreamsHelper streamsHelper = null;
+    private ConnectionInputListener connectionInput;
+    private View view;
+
+    public ConnectionThread(View view) {
+        this.view = view;
+    }
 
     @Override
     protected Integer doInBackground(String... strings) {
-        System.out.println("start");
         try {
-            /*InetSocketAddress address = new InetSocketAddress(strings[0], Integer.parseInt(strings[1]));
-            while (!address.isUnresolved()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }*/
-            socket = new Socket(strings[0], Integer.parseInt(strings[1]));
+            socket = tryConnect(strings[0], Integer.parseInt(strings[1]));
             writer = new DataOutputStream(socket.getOutputStream());
             reader = new DataInputStream(socket.getInputStream());
-            streamsHelper = new StreamsHelper();
+            connectionInput = new ConnectionInputListener();
+            connectionInput.execute();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public boolean isConnected() {
-        return socket != null && socket.isConnected();
-    }
-
-    private void send(String message) {
-        try {
-            writer.writeUTF(message);
-        } catch (IOException e) {
-            e.printStackTrace();
+    private Socket tryConnect(String host, int port) throws InterruptedException {
+        Socket socket;
+        Looper.prepare();
+        while (true) {
+            try {
+                socket = new Socket(host, port);
+            } catch (IOException e) {
+                view.printInfo("try connect");
+                Thread.sleep(1000);
+                continue;
+            }
+            return socket;
         }
     }
 
-    private String read() {
-        try {
-            return reader.readUTF();
-        } catch (IOException e) {
-            e.printStackTrace();
-            //todo
-        }
-        return null;
+
+    public void send(String message) {
+        if (socket != null && socket.isConnected()) {
+            try {
+                writer.writeUTF(message);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else view.printError("not connected");
     }
 
-    public StreamsHelper getStreamsHelper() {
-        return streamsHelper;
-    }
-
-
-    public class StreamsHelper extends AsyncTask<String, Void, String> {
-        private StreamsHelper() {
+    private class ConnectionInputListener extends AsyncTask<Void, Void, Void> {
+        private ConnectionInputListener() {
         }
 
         @Override
-        protected String doInBackground(String... strings) {
-            send(strings[0]);
-            return read();
+        protected Void doInBackground(Void... voids) {
+            try {
+                while (true) {
+                    view.printOutput(reader.readUTF());
+                }
+            } catch (IOException e) {
+                view.printError(e.getLocalizedMessage());
+            }
+            return null;
         }
     }
 }
