@@ -5,7 +5,6 @@ import android.os.AsyncTask;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 
 public class ConnectionThread extends AsyncTask<String, Void, Integer> {
@@ -50,10 +49,7 @@ public class ConnectionThread extends AsyncTask<String, Void, Integer> {
 
     private String read() {
         try {
-            int length = reader.readInt();
-            byte[] buff = new byte[length];
-            reader.readFully(buff, 0, length);
-            return new String(buff);
+            return reader.readUTF();
         } catch (IOException e) {
             e.printStackTrace();
             //todo

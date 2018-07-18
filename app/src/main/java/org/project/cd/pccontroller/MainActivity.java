@@ -7,6 +7,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.concurrent.ExecutionException;
+
 public class MainActivity extends AppCompatActivity {
 
     private Button mainBtn;
@@ -24,8 +26,15 @@ public class MainActivity extends AppCompatActivity {
         command = findViewById(R.id.command);
         mainBtn = findViewById(R.id.button);
         mainBtn.setOnClickListener((l) -> {
-            if (connectionThread.isConnected())
-                result.setText(connectionThread.getStreamsHelper().doInBackground(command.getText().toString()));
+            if (connectionThread.isConnected()) {
+                try {
+                    result.setText(connectionThread.getStreamsHelper().execute(command.getText().toString()).get());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
             else Toast.makeText(this, "not connected", Toast.LENGTH_SHORT).show();
         });
     }
